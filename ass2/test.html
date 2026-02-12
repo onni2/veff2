@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fritos Test</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .pass { color: green; }
+    .fail { color: red; }
+    #box { width: 50px; height: 50px; background: blue; }
+  </style>
+</head>
+<body>
+  <h1>Fritos.js Tests</h1>
+  <div id="output"></div>
+
+  <div id="testarea" style="display:none;">
+    <div class="container">
+      <div class="items">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+      </div>
+    </div>
+    <form id="myform">
+      <div class="group"><input type="text" name="user" value="test"></div>
+      <div class="group"><input type="text" name="pass" value="123"></div>
+    </form>
+    <main id="anc"><div class="a"><div class="b"><span class="c">x</span></div></div></main>
+  </div>
+
+  <h3>Animation test</h3>
+  <div id="box">box</div>
+  <button onclick="fritos('#box').animate({transform:'translateX(100px)'},{duration:500})">Move</button>
+
+  <script src="fritos.js"></script>
+  <script>
+    var results = [];
+    var out = document.getElementById('output');
+
+    function test(name, pass) {
+      results.push({name: name, pass: pass});
+    }
+
+    // 1. fritos defined
+    test('fritos defined', typeof fritos === 'function');
+
+    // 2. selector
+    test('selector works', fritos('#myform input').elements.length === 2);
+
+    // 3. chainable
+    var chain = false;
+    try {
+      var r = fritos('.item').parent().hide();
+      chain = r.elements !== undefined;
+    } catch(e) {}
+    test('chainable', chain);
+
+    // 4. parent
+    var p = fritos('#myform input').parent();
+    test('parent()', p.elements.length === 2);
+    test('parent(selector)', fritos('#myform input').parent('.group').elements.length === 2);
+
+    // 5. ancestor
+    test('ancestor()', fritos('.c').ancestor().elements.length >= 2);
+    test('ancestor(selector)', fritos('.c').ancestor('main').elements.length === 1);
+
+    // 6. animate
+    var anim = false;
+    try {
+      fritos('#box').animate({opacity:'0.5'}, {duration:10});
+      anim = true;
+    } catch(e) {}
+    test('animate()', anim);
+
+    // 7. find
+    test('find()', fritos('.container').find('.item').elements.length === 3);
+    test('find() empty', fritos('.container').find().elements.length === 0);
+
+    // 8. onEvent
+    var ev = false;
+    try {
+      fritos('#box').onEvent('click', function(){});
+      ev = true;
+    } catch(e) {}
+    test('onEvent()', ev);
+
+    // 9. remoteCall
+    test('remoteCall exists', typeof fritos.remoteCall === 'function');
+
+    // 10. validation
+    document.querySelector('input[name="user"]').value = '';
+    var v = fritos('#myform').validation({
+      'user': [{message: 'required', valid: function(x) { return x.length > 0; }}]
+    });
+    test('validation() error', v['user'] === 'required');
+    document.querySelector('input[name="user"]').value = 'hello';
+    var v2 = fritos('#myform').validation({
+      'user': [{message: 'required', valid: function(x) { return x.length > 0; }}]
+    });
+    test('validation() pass', Object.keys(v2).length === 0);
+
+    // 11. hide
+    var h = document.createElement('div');
+    h.id = 'hideme';
+    document.body.appendChild(h);
+    fritos('#hideme').hide();
+    test('hide()', h.style.display === 'none');
+
+    // 12. prune
+    var pr = document.createElement('div');
+    pr.innerHTML = '<div class="wrap"><span class="inner">x</span></div>';
+    document.body.appendChild(pr);
+    fritos('.inner').prune();
+    test('prune()', pr.querySelector('.wrap') === null && pr.querySelector('.inner') !== null);
+    pr.remove();
+
+    // 13. raise
+    var ra = document.createElement('div');
+    ra.innerHTML = '<div class="outer"><span class="kid">y</span></div>';
+    document.body.appendChild(ra);
+    fritos('.kid').raise();
+    test('raise()', ra.children[0].tagName === 'SPAN');
+    ra.remove();
+
+    // 14. attrs
+    fritos('#myform input').attrs('data-x', 'yes');
+    test('attrs()', document.querySelector('#myform input').getAttribute('data-x') === 'yes');
+
+    // 15. val
+    test('val() get', fritos('input[name="user"]').val() === 'hello');
+    fritos('input[name="user"]').val('changed');
+    test('val() set', document.querySelector('input[name="user"]').value === 'changed');
+
+    // show results
+    var pass = 0;
+    var html = '';
+    for (var i = 0; i < results.length; i++) {
+      var r = results[i];
+      if (r.pass) pass++;
+      html += '<div class="' + (r.pass ? 'pass' : 'fail') + '">';
+      html += (r.pass ? 'PASS' : 'FAIL') + ' - ' + r.name + '</div>';
+    }
+    out.innerHTML = '<h2>' + pass + '/' + results.length + ' tests passed</h2>' + html;
+  </script>
+</body>
+</html>
